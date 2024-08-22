@@ -50,26 +50,6 @@ async def process_update(request: Request):
     await ptb.process_update(update)
     return Response(status_code=HTTPStatus.OK)
 
-@app.post("/jobs")
-async def get_jobs(request: Request):
-    print("reseved update")
-    req = await request.json()
-    try:
-        chat_id = req["message"]["to_user"]
-        text = req["message"]["text"]
-    except KeyError:
-        print("key error")
-        return
-
-    print("Sending message")
-    try:
-        await ptb.bot.send_message(chat_id=chat_id, text=text)
-    except Exception as e:
-        print(f"Error sending message: {e}")
-        raise HTTPException(status_code=500, detail="Failed to send message")
-
-    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
-
 @app.post("/verify-user")
 async def verify_user(request: Request):
     print("reseved update")
@@ -103,13 +83,34 @@ async def verify_user(request: Request):
 
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
+@app.post("/jobs")
+async def get_user_jobs(request: Request):
+    print("reseved update")
+    req = await request.json()
+    try:
+        err = req["err"]
+        chat_id = req["chat_id"]
+    except KeyError:
+        print("key error")
+        return
+
+    print("Sending message")
+    if err:
+        try:
+            text = f"error happend {err}\n"
+            await ptb.bot.send_message(chat_id=chat_id, text=text)
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send message")
+
+    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
+
 async def start(update: Update , _: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
     if not update.message:
         return
 
     await update.message.reply_text("starting...")
-
 async def start_verify_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_chat or not update.message or not isinstance(context.user_data, dict):
         return
@@ -183,15 +184,39 @@ async def verify_birth_day(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             try:
                 verified_users = context.bot_data["verified_users"]
-                if not isinstance(verified_users, set):
-                    verified_users = set()
+                if not isinstance(verified_users, dict):
+                    verified_users = {}
             except KeyError:
-                verified_users = set()
+                verified_users = {}
 
-            verified_users.add(update.effective_chat.id)
+            verified_users[update.effective_chat.id] = phone_number
             context.bot_data["verified_users"] = verified_users
             await update.message.reply_text("you will recive jobs now")
             return ConversationHandler.END
+
+async def get_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.effective_chat or not update.message or not isinstance(context.user_data, dict):
+        return
+
+    try:
+        phone_number = context.bot_data["verified_users"][update.effective_chat.id]
+    except KeyError:
+        return  await update.message.reply_text("please user /verify first")
+
+    await update.message.reply_text("proccissing your phone number...")
+    async with httpx.AsyncClient() as client:
+        payload = {
+            "chat_id":update.effective_chat.id,
+            "phone_number":phone_number
+        }
+        response = await client.post(SERVER_URL + '/get-jobs', json=payload)
+        json_data = response.json()
+        err = json_data["err"]
+        data = json_data["data"]
+        if err:
+            await update.message.reply_text(f"error {err}")
+        else:
+            await update.message.reply_text(f"your jobs\n\n{data}")
 
 async def cancel_verify_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_chat or not update.message or not isinstance(context.user_data, dict):
@@ -208,7 +233,7 @@ conversaion_hanlder = ConversationHandler(entry_points=[CommandHandler("verify",
                                           },
                                           fallbacks=[CommandHandler("cancel", cancel_verify_user)])
 ptb.add_handler(conversaion_hanlder)
-
+ptb.add_handler(CommandHandler("get_jobs", get_jobs))
 
 
 
