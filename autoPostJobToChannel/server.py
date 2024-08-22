@@ -8,29 +8,6 @@ load_dotenv()
 
 app = Quart(__name__)
 
-
-payload = {
-    "update_id": 10000,
-    "message": {
-        "message_id": 1,
-        "from": {
-            "id": 123456789,
-            "is_bot": False,
-            "first_name": "John",
-            "username": "john_doe",
-            "language_code": "en"
-        },
-        "chat": {
-            "id": 123456789,
-            "first_name": "John",
-            "username": "john_doe",
-            "type": "private"
-        },
-        "date": 1609459200,
-        "text": ""
-    }
-}
-
 jobs = {
   "web": [
     {
@@ -370,7 +347,7 @@ async def add_jobs():
     if not webhook_url:
         return ""
 
-    webhook_url += "jobs"
+    webhook_url += "jobs/broadcast"
     print(webhook_url)
     for user in users:
         print("loob userser")
@@ -379,10 +356,13 @@ async def add_jobs():
             for key, val in job.items():
                 text += f"{key}:{val}\n"
 
-            
-            payload_ = payload.copy()
-            payload_["message"]["text"] = text
-            payload_["message"]["to_user"] = users_phone_number_to_chat_id[user]
+            chat_id = users_phone_number_to_chat_id[user]
+            print(chat_id)
+            payload_ = {
+                "err":None,
+                "chat_id":chat_id,
+                "data":text
+            }
 
             await send_request(webhook_url, payload_)
 

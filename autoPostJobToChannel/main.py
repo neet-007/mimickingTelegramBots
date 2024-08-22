@@ -15,6 +15,7 @@ BOT_API_TOKEN = getenv("BOT_API_TOKEN")
 if not BOT_API_TOKEN:
     BOT_API_TOKEN = ""
 
+CHANNEL_ID = getenv("CHANNEL_ID")
 WEBHOOK_URL = getenv("WEBHOOK_URL")
     
 SERVER_URL = "http://127.0.0.1:5000"
@@ -103,6 +104,38 @@ async def get_user_jobs(request: Request):
             print(f"Error sending message: {e}")
             raise HTTPException(status_code=500, detail="Failed to send message")
 
+    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
+
+@app.post("/jobs/broadcast")
+async def broadcast_jobs(request: Request):
+    print("reseved update")
+    req = await request.json()
+    try:
+        err = req["err"]
+        chat_id = req["chat_id"]
+        data = req["data"]
+    except KeyError:
+        print("key error")
+        return
+
+    print("Sending message")
+    print(chat_id)
+    if err:
+        try:
+            text = f"error happend {err}\n"
+            await ptb.bot.send_message(chat_id=chat_id, text=text)
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send message")
+    else:
+        try:
+            await ptb.bot.send_message(chat_id=chat_id, text=data)
+            if CHANNEL_ID:
+                print(int(CHANNEL_ID))
+                await ptb.bot.send_message(chat_id=int(CHANNEL_ID) ,text=data)
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send message")
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
 async def start(update: Update , _: ContextTypes.DEFAULT_TYPE):
@@ -234,7 +267,6 @@ conversaion_hanlder = ConversationHandler(entry_points=[CommandHandler("verify",
                                           fallbacks=[CommandHandler("cancel", cancel_verify_user)])
 ptb.add_handler(conversaion_hanlder)
 ptb.add_handler(CommandHandler("get_jobs", get_jobs))
-
 
 
 
