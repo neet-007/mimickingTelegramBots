@@ -9,6 +9,7 @@ quart = "*"
 python-dotenv = "*"
 httpx = "*"
 fastapi = "*"
+uvicorn = "*"
 
 [dev-packages]
 
