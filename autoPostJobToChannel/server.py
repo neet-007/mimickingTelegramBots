@@ -139,18 +139,108 @@ users = {
 
 users_phone_number_to_chat_id = {
     "050 123 4567":"1619288289",
-    "055 987 6543":"1619288289",
+    "055 987 6543":"7320680699",
     "053 234 5678":"1619288289",
-    "059 876 5432":"1619288289"
+    "059 876 5432":"7320680699"
 }
+
+async def send_request(webhook_url, payload):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(webhook_url, json=payload)
+        print(response)
 
 @app.route("/", methods=["GET"])
 def index():
     return "hello"
 
-@app.route("/get-jobs", methods=["POST"])
-def get_jobs():
-    return ""
+@app.route("/verify-phone-number", methods=["POST"])
+async def verify_phone_number():
+    webhook_url = getenv("WEBHOOK_URL")
+    if not webhook_url:
+        return jsonify({"error": "No webhook URL configured"}), 500
+
+    webhook_url += "verify-user"
+
+    data = await request.json
+    chat_id = data.get("chat_id")
+
+    phone_number = data.get("phone_number")
+    if not phone_number:
+        payload_ = {
+            "err": "No phone number provided",
+            "data": None,
+            "chat_id": chat_id
+        }
+        await send_request(webhook_url, payload_)
+        return jsonify(payload_), 400
+
+    if phone_number not in users:
+        payload_ = {
+            "err": "User does not exist",
+            "data": None,
+            "chat_id": chat_id
+        }
+        await send_request(webhook_url, payload_)
+        return jsonify(payload_), 404
+
+    payload_ = {
+        "err": None,
+        "data": None,
+        "chat_id": chat_id
+    }
+
+    await send_request(webhook_url, payload_)
+    return jsonify(payload_), 200
+
+@app.route("/verify-birth-day", methods=["POST"])
+async def verify_birth_day():
+    webhook_url = getenv("WEBHOOK_URL")
+    if not webhook_url:
+        return jsonify({"error": "No webhook URL configured"}), 500
+
+    webhook_url += "verify-user"
+
+    data = await request.json
+    chat_id = data.get("chat_id")
+
+    phone_number = data.get("phone_number")
+    birth_day = data.get("birth_day")
+    if not phone_number or not birth_day:
+        payload_ = {
+            "err": "No phone number or birthday provided",
+            "data": None,
+            "chat_id": chat_id
+        }
+        await send_request(webhook_url, payload_)
+        return jsonify(payload_), 400
+
+    user = users.get(phone_number)
+    if not user:
+        payload_ = {
+            "err": "User does not exist",
+            "data": None,
+            "chat_id": chat_id
+        }
+        await send_request(webhook_url, payload_)
+        return jsonify(payload_), 404
+
+    if user["bd"] != birth_day:
+        payload_ = {
+            "err": "Wrong birthday",
+            "data": None,
+            "chat_id": chat_id
+        }
+        await send_request(webhook_url, payload_)
+        return jsonify(payload_), 400
+
+    payload_ = {
+        "err": None,
+        "chat_id": chat_id,
+        "data": user["pf"]
+    }
+
+    await send_request(webhook_url, payload_)
+    return jsonify(payload_), 200
 
 @app.route("/add-jobs", methods=["POST"])
 async def add_jobs():
@@ -184,9 +274,7 @@ async def add_jobs():
             payload_["message"]["text"] = text
             payload_["message"]["to_user"] = users_phone_number_to_chat_id[user]
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(webhook_url, json=payload)
-                print(response)
+            await send_request(webhook_url, payload_)
 
     return ""
 
