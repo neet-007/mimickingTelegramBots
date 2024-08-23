@@ -105,6 +105,7 @@ async def admin_add_keys():
     webhook_url += "/admin/add-keys"
 
     data = await request.json
+    print(type(data))
     chat_id = data.get("chat_id")
     game = data.get("game")
     key = data.get("key")
