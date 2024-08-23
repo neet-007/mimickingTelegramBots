@@ -157,11 +157,17 @@ async def admin_modify_keys():
                 return jsonify({"err": "game does not exist"}), 404
 
             keys = file[game]["keys"]
+            print(keys)
             try:
+                print(keys.index(key))
                 keys[keys.index(key)] = new_key
+                print(keys)
             except ValueError:
                 return jsonify({"err": "key does not exist"}), 404
 
+            keys[1] = new_key
+            print(keys)
+            file[game]["keys"] = keys
             f.seek(0)
             json.dump(file, f)
             f.truncate()
@@ -180,18 +186,17 @@ async def admin_modify_keys():
     except js.JSONDecodeError:
         return jsonify({"err": "file is not valid JSON"}), 500
 
-@app.route("/admin/delte-keys", methods=["DELETE"])
+@app.route("/admin/delete-keys", methods=["DELETE"])
 async def admin_delete_keys():
     webhook_url = getenv("WEBHOOK_URL")
     if not webhook_url:
         return jsonify({"error": "No webhook URL configured"}), 500
 
-    webhook_url += "/admin/modify-keys"
+    webhook_url += "/admin/delete-keys"
 
-    data = await request.json
-    chat_id = data.get("chat_id")
-    game = data.get("game")
-    key = data.get("key")
+    chat_id = request.args.get("chat_id")
+    game = request.args.get("game")
+    key = request.args.get("key")
 
     try:
         with open("./database.json", "r+") as f:

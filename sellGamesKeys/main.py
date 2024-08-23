@@ -106,6 +106,44 @@ async def admin_add_keys(request: Request):
     await ptb.bot.send_message(text="key added succefully", chat_id=ADMIN_ID)
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
+@app.post("/admin/modify-keys")
+async def admin_modify_keys(request: Request):
+    print("reseved update")
+    if not ADMIN_ID:
+        return
+
+    print("dejosing")
+    response_json = await request.json()
+    print("json ready")
+    try:
+        err = response_json["err"]
+    except KeyError:
+        return await ptb.bot.send_message(text="error happend response data is not formatted correctly", chat_id=ADMIN_ID)
+    if err:
+        await ptb.bot.send_message(text=f"an error happend {err}", chat_id=ADMIN_ID)
+
+    await ptb.bot.send_message(text="key added succefully", chat_id=ADMIN_ID)
+    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
+
+@app.post("/admin/delete-keys")
+async def admin_delete_keys(request: Request):
+    print("reseved update")
+    if not ADMIN_ID:
+        return
+
+    print("dejosing")
+    response_json = await request.json()
+    print("json ready")
+    try:
+        err = response_json["err"]
+    except KeyError:
+        return await ptb.bot.send_message(text="error happend response data is not formatted correctly", chat_id=ADMIN_ID)
+    if err:
+        await ptb.bot.send_message(text=f"an error happend {err}", chat_id=ADMIN_ID)
+
+    await ptb.bot.send_message(text="key added succefully", chat_id=ADMIN_ID)
+    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
+
 async def handle_start_admin_view_keys(update: Update, context:ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
         return
@@ -148,16 +186,67 @@ async def handle_admin_add_keys(update: Update, context: ContextTypes.DEFAULT_TY
     if update.effective_user.id != int(ADMIN_ID):
         return await update.message.reply_text("you are not verfied for this")
     
-    text = update.message.text.lower().split(",")
+    text = update.message.text.split(",")
     if len(text) != 2:
         return await update.message.reply_text("please send game then key separated by comm")
 
     async with httpx.AsyncClient() as client:
         await client.post(url=SERVER_URL + f"/admin/add-keys", json={
                 "chat_id":ADMIN_ID,
-                "game":text[0].strip(),
+                "game":text[0].strip().lower(),
                 "key":text[1].strip()
         })
+
+async def handle_start_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    if update.effective_user.id != int(ADMIN_ID):
+        return await update.message.reply_text("you are not verfied for this")
+    
+    await update.message.reply_text("send the game and the old key and new key separated by comma 'game, key' ")
+
+async def handle_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    if update.effective_user.id != int(ADMIN_ID):
+        return await update.message.reply_text("you are not verfied for this")
+    
+    text = update.message.text.split(",")
+    if len(text) != 3:
+        return await update.message.reply_text("please send game then old key then new key separated by comm")
+
+    async with httpx.AsyncClient() as client:
+        await client.put(url=SERVER_URL + f"/admin/modify-keys", json={
+                "chat_id":ADMIN_ID,
+                "game":text[0].strip().lower(),
+                "old_key":text[1].strip(),
+                "new_key":text[1].strip()
+        })
+
+async def handle_start_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    if update.effective_user.id != int(ADMIN_ID):
+        return await update.message.reply_text("you are not verfied for this")
+    
+    await update.message.reply_text("send the game and key separated by comma 'game, key' ")
+
+async def handle_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    if update.effective_user.id != int(ADMIN_ID):
+        return await update.message.reply_text("you are not verfied for this")
+    
+    text = update.message.text.split(",")
+    if len(text) != 2:
+        return await update.message.reply_text("please send game then key separated by comm")
+
+    async with httpx.AsyncClient() as client:
+        await client.delete(url=SERVER_URL + f"/admin/delete-keys?game={text[0].lower()}&key={text[1].lower()}&chat_id={ADMIN_ID}")
 
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.callback_query or not update.effective_user or not isinstance(context.user_data, dict) or not update.effective_chat or not SERVER_URL:
@@ -217,8 +306,12 @@ async def start(update: Update , _: ContextTypes.DEFAULT_TYPE):
 ptb.add_handler(CommandHandler("start", start))
 ptb.add_handler(CommandHandler("admin_view_keys", handle_start_admin_view_keys))
 ptb.add_handler(CommandHandler("admin_add_keys", handle_start_admin_add_keys))
+ptb.add_handler(CommandHandler("admin_modify_keys", handle_start_admin_modify_keys))
+ptb.add_handler(CommandHandler("admin_delete_keys", handle_start_admin_delete_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_view_keys))
-ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_add_keys))
+#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_add_keys))
+#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_modify_keys))
+ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
 ptb.add_handler(CallbackQueryHandler(handle_callbacks))
 
 
