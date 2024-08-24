@@ -240,7 +240,7 @@ async def buy_game():
     chat_id = data.get("chat_id")
     game = data.get("game")
     count = int(data.get("count"))
-    bought_keys = [0] * count
+    bought_keys = [""] * count
 
     try:
         with open("./database.json", "r+") as f:
@@ -252,25 +252,32 @@ async def buy_game():
             price = file[game]["price"]
 
             len_keys = len(keys)
+            if len_keys == 0:
+                payload = {
+                    "chat_id":chat_id,
+                    "err":"all games are sold",
+                    "data":None
+                }
+
+                await send_request(webhook_url, payload)
+                return jsonify(payload), 400
+
             for i in range(count):
                 if len_keys <= 0:
                     break
-                bought_keys[i] = keys.pop()
+                bought_keys[i] = str(keys.pop()) + "\n"
                 len_keys -= 1
+                count -= 1
 
             f.seek(0)
             json.dump(file, f)
             f.truncate()
 
+            keys = "\n".join(bought_keys)
             payload = {
                 "chat_id":chat_id,
                 "err":None,
-                "data":{
-                    "game":game,
-                    "keys":bought_keys,
-                    "bill":len(bought_keys) * price,
-                    "remaining_keys":count
-                }
+                "data":f"game:{game}\nbill:{len(bought_keys) * price}\nremaining keys:{count}\nkeys:{keys}\n"
             }
 
             await send_request(webhook_url, payload)

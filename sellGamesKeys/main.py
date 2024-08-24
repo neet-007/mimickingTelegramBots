@@ -145,7 +145,7 @@ async def admin_delete_keys(request: Request):
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
 @app.post("/buy-games")
-async def admin_modify_keys(request: Request):
+async def buy_games(request: Request):
     print("reseved update")
     print("dejosing")
 
@@ -159,8 +159,8 @@ async def admin_modify_keys(request: Request):
         return await ptb.bot.send_message(text="error happend response data is not formatted correctly", chat_id=chat_id)
     if err:
         await ptb.bot.send_message(text=f"an error happend {err}", chat_id=chat_id)
-
-    await ptb.bot.send_message(text=f"game bought succesfuly\n{data}", chat_id=chat_id)
+    if data:
+        await ptb.bot.send_message(text=f"game bought succesfuly\n{data}", chat_id=chat_id)
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
 async def handle_start_admin_view_keys(update: Update, context:ContextTypes.DEFAULT_TYPE):
