@@ -144,6 +144,25 @@ async def admin_delete_keys(request: Request):
     await ptb.bot.send_message(text="key added succefully", chat_id=ADMIN_ID)
     return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
 
+@app.post("/buy-games")
+async def admin_modify_keys(request: Request):
+    print("reseved update")
+    print("dejosing")
+
+    response_json = await request.json()
+    print("json ready")
+    try:
+        err = response_json["err"]
+        chat_id = response_json["chat_id"]
+        data = response_json["data"]
+    except KeyError:
+        return await ptb.bot.send_message(text="error happend response data is not formatted correctly", chat_id=chat_id)
+    if err:
+        await ptb.bot.send_message(text=f"an error happend {err}", chat_id=chat_id)
+
+    await ptb.bot.send_message(text=f"game bought succesfuly\n{data}", chat_id=chat_id)
+    return JSONResponse(content={"status": "success", "message": "Message sent successfully"}, status_code=200)
+
 async def handle_start_admin_view_keys(update: Update, context:ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
         return
@@ -248,6 +267,27 @@ async def handle_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT
     async with httpx.AsyncClient() as client:
         await client.delete(url=SERVER_URL + f"/admin/delete-keys?game={text[0].lower()}&key={text[1].lower()}&chat_id={ADMIN_ID}")
 
+async def handle_start_buy_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    await update.message.reply_text("send the game you want then the number of copies separated by comma ','")
+
+async def handle_buy_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text or not update.effective_user or not SERVER_URL or not isinstance(context.user_data, dict):
+        return
+
+    text = update.message.text.split(",")
+    if len(text) != 2:
+        return await update.message.reply_text("please send game then old key then new key separated by comm")
+
+    async with httpx.AsyncClient() as client:
+        await client.post(url=SERVER_URL + f"/buy-games", json={
+                "chat_id":ADMIN_ID,
+                "game":text[0].strip().lower(),
+                "count":text[1].strip(),
+        })
+
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.callback_query or not update.effective_user or not isinstance(context.user_data, dict) or not update.effective_chat or not SERVER_URL:
         return
@@ -308,10 +348,12 @@ ptb.add_handler(CommandHandler("admin_view_keys", handle_start_admin_view_keys))
 ptb.add_handler(CommandHandler("admin_add_keys", handle_start_admin_add_keys))
 ptb.add_handler(CommandHandler("admin_modify_keys", handle_start_admin_modify_keys))
 ptb.add_handler(CommandHandler("admin_delete_keys", handle_start_admin_delete_keys))
+ptb.add_handler(CommandHandler("buy_keys", handle_start_buy_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_view_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_add_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_modify_keys))
-ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
+#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
+ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_buy_keys))
 ptb.add_handler(CallbackQueryHandler(handle_callbacks))
 
 

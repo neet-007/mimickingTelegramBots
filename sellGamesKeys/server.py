@@ -228,18 +228,18 @@ async def admin_delete_keys():
     except js.JSONDecodeError:
         return jsonify({"err": "file is not valid JSON"}), 500
 
-@app.route("/buy-game", methods=["POST"])
+@app.route("/buy-games", methods=["POST"])
 async def buy_game():
     webhook_url = getenv("WEBHOOK_URL")
     if not webhook_url:
         return jsonify({"error": "No webhook URL configured"}), 500
 
-    webhook_url += "/buy-game"
+    webhook_url += "/buy-games"
 
     data = await request.json
     chat_id = data.get("chat_id")
     game = data.get("game")
-    count = data.get("count")
+    count = int(data.get("count"))
     bought_keys = [0] * count
 
     try:
@@ -266,7 +266,7 @@ async def buy_game():
                 "chat_id":chat_id,
                 "err":None,
                 "data":{
-                    "gane":game,
+                    "game":game,
                     "keys":bought_keys,
                     "bill":len(bought_keys) * price,
                     "remaining_keys":count
