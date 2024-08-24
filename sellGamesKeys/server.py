@@ -295,35 +295,69 @@ async def view_games():
     if not webhook_url:
         return jsonify({"error": "No webhook URL configured"}), 500
 
-    webhook_url += "/admin/view-keys"
+    webhook_url += "/view-keys"
 
     chat_id = request.args.get("chat_id")
+    games = request.args.getlist("games")
     page = request.args.get("page")
+    message_id = request.args.get("message_id")
     if not page:
         page = 0
 
-    skip = int(page) * 20
+    count = 20
+    skip = int(page) * count
 
     try:
         with open("./database.json") as f:
+            print("file opend")
             file = json.load(f)
             text = ""
-            for game, details in file.items():
-                if skip > 0:
-                    skip -= 1
-                    continue
-                price = details["price"]
-                text += f"{game}:{price}, available:{len(details['keys'])}"
+            if len(games) > 1:
+                for game in games:
+                    if skip > 0:
+                        skip -= 1
+                        continue
+                    if count <= 0:
+                        break
+                    price = file[game]["price"]
+                    text += f"{game}:{price}\n"
 
-            payload = {
-                "chat_id":chat_id,
-                "err":None,
-                "data":text
-            }
+                print(text)
+                text += f"{int(page) + 1}"
+                payload = {
+                    "chat_id":chat_id,
+                    "err":None,
+                    "data":text,
+                    "message_id":message_id
+                }
 
-            await send_request(webhook_url, payload)
+                await send_request(webhook_url, payload)
 
-            return jsonify(payload), 200
+                return jsonify(payload), 200
+            else:
+                print("one game pr all")
+                for game, details in file.items():
+                    if skip > 0:
+                        skip -= 1
+                        continue
+                    if count <= 0:
+                        break
+                    price = details["price"]
+                    text += f"{game}:{price}\n"
+                    count -= 1
+
+                text += f"{int(page) + 1}"
+                payload = {
+                    "chat_id":chat_id,
+                    "err":None,
+                    "data":text,
+                    "message_id":message_id
+                }
+
+                print("sending request")
+                await send_request(webhook_url, payload)
+
+                return jsonify(payload), 200
     except OSError:
         return jsonify({"err": "could not open file"}), 500
     except js.JSONDecodeError:
