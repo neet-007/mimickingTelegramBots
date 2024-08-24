@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from http import HTTPStatus
 from quart import json
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+import telegram
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ConversationHandler, MessageHandler, PicklePersistence, filters
 from telegram.ext._contexttypes import ContextTypes
 from fastapi import FastAPI, Request, Response, HTTPException, responses
@@ -21,6 +22,7 @@ WEBHOOK_URL = getenv("WEBHOOK_URL")
 ADMIN_ID = getenv("ADMIN_CHAT_ID")   
 SERVER_URL = getenv("SERVER_URL")
 
+VIEW_KEYS, ADD_KEYS, DELETE_KEYS, MODIFY_KEYS, VIEW_GAMES, BUY_GAMES  = range(6)
 ptb = (
     Application.builder()
     .updater(None)
@@ -199,23 +201,26 @@ async def buy_games(request: Request):
 
 async def handle_start_admin_view_keys(update: Update, context:ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     print(ADMIN_ID)
     print(update.effective_user.id)
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
 
     context.user_data["state"] = "view-games"
     context.user_data["page"] = 0
     await update.message.reply_text(text="send the games you want to see if you want to send all games reply with 'all' ")
+    return VIEW_KEYS
 
 async def handle_admin_view_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
 
     games = "&games=".join([game.strip() for game in update.message.text.lower().split(",")])
 
@@ -223,21 +228,26 @@ async def handle_admin_view_keys(update: Update, context: ContextTypes.DEFAULT_T
     async with httpx.AsyncClient() as client:
         await client.get(url=SERVER_URL + f"/admin/view-keys?games={games}&page=0")
 
+    return ConversationHandler.END
+
 async def handle_start_admin_add_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     await update.message.reply_text("send the game and key separated by comma 'game, key' ")
+    return ADD_KEYS
 
 async def handle_admin_add_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     text = update.message.text.split(",")
     if len(text) != 2:
@@ -250,25 +260,31 @@ async def handle_admin_add_keys(update: Update, context: ContextTypes.DEFAULT_TY
                 "key":text[1].strip()
         })
 
+    return ConversationHandler.END
+
 async def handle_start_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     await update.message.reply_text("send the game and the old key and new key separated by comma 'game, key' ")
+    return MODIFY_KEYS
 
 async def handle_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     text = update.message.text.split(",")
     if len(text) != 3:
-        return await update.message.reply_text("please send game then old key then new key separated by comm")
+        await update.message.reply_text("please send game then old key then new key separated by comm")
+        return MODIFY_KEYS
 
     async with httpx.AsyncClient() as client:
         await client.put(url=SERVER_URL + f"/admin/modify-keys", json={
@@ -278,40 +294,49 @@ async def handle_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT
                 "new_key":text[2].strip()
         })
 
+    return ConversationHandler.END
+
 async def handle_start_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     await update.message.reply_text("send the game and key separated by comma 'game, key' ")
+    return DELETE_KEYS
 
 async def handle_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not ADMIN_ID or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     if update.effective_user.id != int(ADMIN_ID):
-        return await update.message.reply_text("you are not verfied for this")
+        await update.message.reply_text("you are not verfied for this")
+        return ConversationHandler.END
     
     text = update.message.text.split(",")
     if len(text) != 2:
-        return await update.message.reply_text("please send game then key separated by comm")
+        await update.message.reply_text("please send game then key separated by comm")
+        return DELETE_KEYS
 
     async with httpx.AsyncClient() as client:
         await client.delete(url=SERVER_URL + f"/admin/delete-keys?game={text[0].lower()}&key={text[1].strip()}&chat_id={ADMIN_ID}")
+    
+    return ConversationHandler.END
 
 async def handle_start_view_keys(update: Update, context:ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.effective_user or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     context.user_data["state"] = "view-games"
     context.user_data["page"] = 0
     await update.message.reply_text(text="send the games you want to see if you want to send all games reply with 'all' ")
+    return VIEW_GAMES
 
 async def handle_view_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_chat or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     games = "&games=".join([game.strip() for game in update.message.text.lower().split(",")])
 
@@ -319,20 +344,24 @@ async def handle_view_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["chat_id"] = update.effective_chat.id
     async with httpx.AsyncClient() as client:
         await client.get(url=SERVER_URL + f"/view-keys?games={games}&page=0&chat_id={update.effective_chat.id}")
+    
+    return ConversationHandler.END
 
 async def handle_start_buy_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     await update.message.reply_text("send the game you want then the number of copies separated by comma ','")
+    return BUY_GAMES
 
 async def handle_buy_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text or not update.effective_user or not SERVER_URL or not isinstance(context.user_data, dict):
-        return
+        return ConversationHandler.END
 
     text = update.message.text.split(",")
     if len(text) != 2:
-        return await update.message.reply_text("please send game then old key then new key separated by comm")
+        await update.message.reply_text("please send game then old key then new key separated by comm")
+        return BUY_GAMES
 
     async with httpx.AsyncClient() as client:
         await client.post(url=SERVER_URL + f"/buy-games", json={
@@ -340,6 +369,8 @@ async def handle_buy_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "game":text[0].strip().lower(),
                 "count":text[1].strip(),
         })
+
+    return ConversationHandler.END
 
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.callback_query or not update.effective_user or not isinstance(context.user_data, dict) or not update.effective_chat or not SERVER_URL:
@@ -407,19 +438,49 @@ async def start(update: Update , _: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("starting...")
 
+view_keys_conv = ConversationHandler(
+    entry_points=[CommandHandler("admin_view_keys", handle_start_admin_view_keys)],
+    states={VIEW_KEYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_view_keys)]},
+    fallbacks=[],
+)
+
+add_keys_conv = ConversationHandler(
+    entry_points=[CommandHandler("admin_add_keys", handle_start_admin_add_keys)],
+    states={ADD_KEYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_add_keys)]},
+    fallbacks=[],
+)
+
+delete_keys_conv = ConversationHandler(
+    entry_points=[CommandHandler("admin_delete_keys", handle_start_admin_delete_keys)],
+    states={DELETE_KEYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_delete_keys)]},
+    fallbacks=[],
+)
+
+modify_keys_conv = ConversationHandler(
+    entry_points=[CommandHandler("admin_modify_keys", handle_start_admin_modify_keys)],
+    states={MODIFY_KEYS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_modify_keys)]},
+    fallbacks=[],
+)
+
+view_games_conv = ConversationHandler(
+    entry_points=[CommandHandler("view_games", handle_start_view_keys)],
+    states={VIEW_GAMES: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_view_keys)]},
+    fallbacks=[],
+)
+
+buy_games_conv = ConversationHandler(
+    entry_points=[CommandHandler("buy_games", handle_start_buy_keys)],
+    states={BUY_GAMES: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buy_keys)]},
+    fallbacks=[],
+)
+
 ptb.add_handler(CommandHandler("start", start))
-ptb.add_handler(CommandHandler("admin_view_keys", handle_start_admin_view_keys))
-ptb.add_handler(CommandHandler("admin_add_keys", handle_start_admin_add_keys))
-ptb.add_handler(CommandHandler("admin_modify_keys", handle_start_admin_modify_keys))
-ptb.add_handler(CommandHandler("admin_delete_keys", handle_start_admin_delete_keys))
-ptb.add_handler(CommandHandler("view_keys", handle_start_view_keys))
-ptb.add_handler(CommandHandler("buy_keys", handle_start_buy_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_view_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_add_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_modify_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_buy_keys))
-ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_view_keys))
+ptb.add_handler(view_keys_conv)
+ptb.add_handler(add_keys_conv)
+ptb.add_handler(delete_keys_conv)
+ptb.add_handler(modify_keys_conv)
+ptb.add_handler(view_games_conv)
+ptb.add_handler(buy_games_conv)
 ptb.add_handler(CallbackQueryHandler(handle_callbacks))
 
 
