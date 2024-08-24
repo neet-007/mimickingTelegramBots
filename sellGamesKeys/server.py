@@ -158,16 +158,14 @@ async def admin_modify_keys():
 
             keys = file[game]["keys"]
             print(keys)
+            print(new_key)
+            print(keys.index(key))
             try:
-                print(keys.index(key))
                 keys[keys.index(key)] = new_key
-                print(keys)
             except ValueError:
                 return jsonify({"err": "key does not exist"}), 404
 
-            keys[1] = new_key
             print(keys)
-            file[game]["keys"] = keys
             f.seek(0)
             json.dump(file, f)
             f.truncate()

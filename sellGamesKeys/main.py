@@ -241,7 +241,7 @@ async def handle_admin_modify_keys(update: Update, context: ContextTypes.DEFAULT
                 "chat_id":ADMIN_ID,
                 "game":text[0].strip().lower(),
                 "old_key":text[1].strip(),
-                "new_key":text[1].strip()
+                "new_key":text[2].strip()
         })
 
 async def handle_start_admin_delete_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -351,8 +351,8 @@ ptb.add_handler(CommandHandler("admin_delete_keys", handle_start_admin_delete_ke
 ptb.add_handler(CommandHandler("buy_keys", handle_start_buy_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_view_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_add_keys))
-#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_modify_keys))
-ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
+ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_modify_keys))
+#ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_admin_delete_keys))
 #ptb.add_handler(MessageHandler((filters.TEXT & ~ filters.COMMAND), handle_buy_keys))
 ptb.add_handler(CallbackQueryHandler(handle_callbacks))
 
