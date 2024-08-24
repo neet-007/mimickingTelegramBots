@@ -194,6 +194,7 @@ async def admin_delete_keys():
 
     webhook_url += "/admin/delete-keys"
 
+    print("here")
     chat_id = request.args.get("chat_id")
     game = request.args.get("game")
     key = request.args.get("key")
@@ -201,6 +202,7 @@ async def admin_delete_keys():
     try:
         with open("./database.json", "r+") as f:
             file = json.load(f)
+            print(game)
             if not game in file:
                 return jsonify({"err": "game does not exist"}), 404
 
@@ -220,6 +222,7 @@ async def admin_delete_keys():
                 "data":None
             }
 
+            print("sending reqiest")
             await send_request(webhook_url, payload)
             return jsonify(payload), 200
 
